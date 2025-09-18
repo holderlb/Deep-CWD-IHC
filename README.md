@@ -23,18 +23,16 @@ which are extracted in GeoJSON format.
 
 * `README.md`: This file.
 * `environment.yml`: Conda environment.
-* `train/`
-** Scripts used to train DL models.
-* `analyze/`
-** Scripts used to analyze new images.
-* `common/`
-** Scripts used by `analyze` and `train`.
-* `utils/`
-** Scripts use for extracting annotations and annotating images.
+* `train/`: Scripts used to train DL models.
+* `analyze/`: Scripts used to analyze new images.
+* `common/`: Scripts used by `analyze` and `train`.
+* `utils/`: Scripts use for extracting annotations and annotating images.
 
-## Instructions
+The framework is designed as a set of scripts that are called from the command line or from
+the main scripts: `train/train.py` and `analyze/analyze.py`.
+Generally, the scripts have detailed comments at the top of the file describing their usage.
 
-### Setup
+## Setup
 
 The Deep-CWD-IHC framework was designed for a conda environment running on a Linux-based system.
 The specific environment used for development was Ubuntu 22 running Python 3.11 and Tensorflow 2.15.
@@ -43,11 +41,18 @@ A conda environment export is given in `environment.yml`. To setup a similar env
 
 `conda env create -f environment.yml`
 
+## Train models
+
 ### Exporting image annotations
 
-The first step to training models is the identify regions of interest in the slide images. We assume
+The first step to train models is to identify regions of interest in the slide images. We assume
 the use of QuPath for manually annotating images in SVS format. Once the images are annotated, these
-annotations can be exported from QuPath using the 
+annotations can be exported from QuPath using the `utils/export-annotations.sh` shell script. See
+details in the script's comments for proper setup. Executing the script will result in an
+`<image>.annotations.json` file for each image in the QuPath project. The file describes the
+annotation locations in GeoJSON format.
+
+
 
 ### Step 0: Scale slides (optional)
 

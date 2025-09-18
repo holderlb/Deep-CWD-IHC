@@ -6,7 +6,7 @@
 # expected, a CSV file with the image, contour number, and tissue type. When
 # collecting tiles, the tiles are copied to the given train_dir. Each tile
 # class is sampled at the given sample_rate (default=1.0). If --enhance is
-# given, then contrast is enhanced all training images and tiles. If
+# given, then contrast is enhanced for all training images and tiles. If
 # --background is given, then tasks are run in the background (CAREFUL:
 # calling train multiple times with --background can saturate machine).
 #
