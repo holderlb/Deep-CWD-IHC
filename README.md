@@ -1,6 +1,6 @@
 # Deep-CWD-IHC
 
-Automated Chronic Wasting Disease (CWD) Immunohistochemistry (IHC) deep learning image analysis framework.
+Deep learning framework for automated Chronic Wasting Disease (CWD) Immunohistochemistry (IHC).
 
 The overall goal of this framework is to identify slides with positive indications of CWD. However, the
 framework could also be used to look for similar properties/diseases in other image/tissue types. The
@@ -19,7 +19,35 @@ motor nuclei (in obex tissue), and positive and negative examples of follicles (
 The image slides are assumed to be in SVS format. The annotations are assumed to be added via QuPath,
 which are extracted in GeoJSON format.
 
+## Overview
+
+* `README.md`: This file.
+* `environment.yml`: Conda environment.
+* `train/`
+** Scripts used to train DL models.
+* `analyze/`
+** Scripts used to analyze new images.
+* `common/`
+** Scripts used by `analyze` and `train`.
+* `utils/`
+** Scripts use for extracting annotations and annotating images.
+
 ## Instructions
+
+### Setup
+
+The Deep-CWD-IHC framework was designed for a conda environment running on a Linux-based system.
+The specific environment used for development was Ubuntu 22 running Python 3.11 and Tensorflow 2.15.
+A conda environment export is given in `environment.yml`. To setup a similar environment called
+`deep-cwd-ihc`, install conda and execute:
+
+`conda env create -f environment.yml`
+
+### Exporting image annotations
+
+The first step to training models is the identify regions of interest in the slide images. We assume
+the use of QuPath for manually annotating images in SVS format. Once the images are annotated, these
+annotations can be exported from QuPath using the 
 
 ### Step 0: Scale slides (optional)
 

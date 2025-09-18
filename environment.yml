@@ -1,4 +1,4 @@
-name: usda-env
+name: deep-cwd-ihc
 channels:
   - defaults
   - conda-forge
