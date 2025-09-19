@@ -226,9 +226,22 @@ script for details.
 The script creates an HTML directory `<image_file>-html` containing the results of the
 analysis. Load the `index.html` file from this directory to view the results.
 
-## Visualization tools
+## Visualization tool
 
+The `utils/annotate.py` script is provided to support various visualizations of the
+above processes.
 
+```
+annotate.py --image <svs_slide> --geojson <geojson_file>
+            --errors <color> --class <class> --probability <prob>
+            --tiles_dir <tiles_dir> 
+```
+
+The script scales and annotates the given image with contours provided by the
+GeoJSON file and tiles found in the tiles directory. Displayed tiles can be
+filtered by a particular class and a particular prediction probability threshold.
+Tiles incorrectly predicted can be highlighted in a different color.
+See the comment at the top of the script for more details.
 
 ## Contributors
 
