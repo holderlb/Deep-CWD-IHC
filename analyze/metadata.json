@@ -1,0 +1,10 @@
+{
+    "minimum_probability_follicle_tile": 0.95,
+    "minimum_probability_dmn_tile": 0.95,
+    "minimum_area_follicle_region": 1310720,
+    "minimum_area_dmn_region": 1310720,
+    "minimum_percent_stained_pixels_node": 0.002,
+    "minimum_percent_stained_pixels_obex": 0.02,
+    "minimum_number_follicles": 6
+}
+

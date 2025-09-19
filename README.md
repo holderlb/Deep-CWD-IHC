@@ -196,46 +196,35 @@ This script will be run twice: once to generate the node model, which we refer t
 
 ## Analyze new image
 
+Below are the steps for analyzing a new image.
+
 ### Setup
 
-Before analyzing a new image, we must put a few files in place. First, the three models
-('model-tissue.keras`, `model-node.keras`, `model-obex.keras`) should be copied into
-the `models` directory within the main repository directory.
-
-Accompanying each model
+Before analyzing a new image, the three models
+(`model-tissue.keras`, `model-node.keras`, `model-obex.keras`) should be copied into
+the `models` directory within the main repository directory. Accompanying each model
 should be a JSON file describing the class names predicted by the model, in the proper
 order. The first name should correspond to the model's output 0, and the second name should
-correspond to the model's output 1. Assuming the training process above is followed, these
-JSON files should contain the following:
+correspond to the model's output 1. Assuming the training process above is followed, the
+JSON files include in the repository will suffice.
 
-```
-model-tissue.json:
-    {"class_names": ["node", "obex"]}
-model-node.json:
-    {"class_names": ["follicle", "non-follicular"]}
-model-obex.json:
-    {"class_names": ["dorsal_motor_nucleus", "not_dmn"]}
-```
-
-Next, the analysis script accepts an optional metadata JSON file setting various
-parameters of the analysis process. The default values have been found to yield
+The analysis script requires the input of a metadata JSON file setting various
+parameters for the analysis process. A sample `analyze/metadata.json`
+file has been provided with values that have been found to yield
 good results, but you can tweak these parameters if desired.
 
 ### Analysis
+
 To analyze a new image, we use the `analyze/analyze.py` script.
 
-`analyze.py --image_file <image_file> [--metadata <metadata_file>]`
+`analyze.py --image_file <image_file.svs> --metadata <metadata_file>`
 
-This script calls all the other scripts to analyze the image.
+This script calls all the other scripts to analyze the image. The process is long and
+complicated, so we do not detail it here. See the calls at the bottom of the `analyze.py`
+script for details.
 
-### Setup
-
-Before analyzing new images, we must put a few files in place. First, the three models
-from the previous section
-
-The `generate-tiles` script also analyzes the tiles for the presence of staining. The
-number of stained pixels in the 300x300 tile is also written to the tiles corresponding
-row in the CSV file.
+The script creates an HTML directory `<image_file>-html` containing the results of the
+analysis. Load the `index.html` file from this directory to view the results.
 
 ## Visualization tools
 

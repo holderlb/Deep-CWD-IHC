@@ -503,9 +503,9 @@ def write_html(image_file, metadata):
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--image_file', dest='image_file', type=str, required=True)
+    parser.add_argument('--metadata', dest='metadata_file', type=str, required=True)
     parser.add_argument('--enhance', action='store_true')
     parser.add_argument('--background', action='store_true')
-    parser.add_argument('--metadata', dest='metadata_file', type=str)
     args = parser.parse_args()
     return args
 
