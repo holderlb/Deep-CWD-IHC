@@ -28,6 +28,7 @@ which are extracted in GeoJSON format.
 * `train/`: Scripts used to train DL models.
 * `analyze/`: Scripts used to analyze new images.
 * `common/`: Scripts used by `analyze` and `train`.
+* `models/`: Where trained models will reside.
 * `utils/`: Scripts use for extracting annotations and annotating images.
 
 The framework is designed as a set of scripts that are called from the command line.
@@ -53,10 +54,7 @@ First, we need to extract the tissue contours from the images. The `common/segme
 used for this purpose. The script identifies each tissue contour in the image and outputs a
 GeoJSON file describing the points outlining the contour. Each contour is numbered 1, 2, etc.
 
-`python segment.py --image <svs_image_file> --enhance`
-
-The `--enhance` argument can be used to increase the contrast of a low-contrast image. However,
-we generally found that this option is not needed.
+`segment.py --image <svs_image_file>`
 
 ### Label tissue contours
 
@@ -80,7 +78,7 @@ top of the script for details.
 ```
 generate-tiles.py --image <svs_slide_file> --annotations <annotations_file>
                   --tiles_dir <tiles_dir> [--overlap <N.N>] [--tile_size <N>]
-                  [--tile_increment <N>] [--enhance]
+                  [--tile_increment <N>]
 ```
 
 The simplest invocation of this script is to just provide the image, the annotations file
@@ -140,7 +138,7 @@ locations of the annotations in GeoJSON format.
 
 `./export-annotations.sh`
 
-### Generate node/obex training tiles
+### Generate node/obex training tiles (and staining information)
 
 We generate training tiles for using the same
 `common/generate_tiles.py` script as used above, except we will use the GeoJSON annotations from
@@ -152,7 +150,7 @@ top of the script for details.
 ```
 generate-tiles.py --image <svs_slide_file> --annotations <annotations_file>
                   --tiles_dir <tiles_dir> [--overlap <N.N>] [--tile_size <N>]
-                  [--tile_increment <N>] [--enhance]
+                  [--tile_increment <N>]
 ```
 
 The simplest invocation of this script is to just provide the image, the annotations file
@@ -197,6 +195,47 @@ This script will be run twice: once to generate the node model, which we refer t
 `model-obex.keras`.
 
 ## Analyze new image
+
+### Setup
+
+Before analyzing a new image, we must put a few files in place. First, the three models
+('model-tissue.keras`, `model-node.keras`, `model-obex.keras`) should be copied into
+the `models` directory within the main repository directory.
+
+Accompanying each model
+should be a JSON file describing the class names predicted by the model, in the proper
+order. The first name should correspond to the model's output 0, and the second name should
+correspond to the model's output 1. Assuming the training process above is followed, these
+JSON files should contain the following:
+
+```
+model-tissue.json:
+    {"class_names": ["node", "obex"]}
+model-node.json:
+    {"class_names": ["follicle", "non-follicular"]}
+model-obex.json:
+    {"class_names": ["dorsal_motor_nucleus", "not_dmn"]}
+```
+
+Next, the analysis script accepts an optional metadata JSON file setting various
+parameters of the analysis process. The default values have been found to yield
+good results, but you can tweak these parameters if desired.
+
+### Analysis
+To analyze a new image, we use the `analyze/analyze.py` script.
+
+`analyze.py --image_file <image_file> [--metadata <metadata_file>]`
+
+This script calls all the other scripts to analyze the image.
+
+### Setup
+
+Before analyzing new images, we must put a few files in place. First, the three models
+from the previous section
+
+The `generate-tiles` script also analyzes the tiles for the presence of staining. The
+number of stained pixels in the 300x300 tile is also written to the tiles corresponding
+row in the CSV file.
 
 ## Visualization tools
 

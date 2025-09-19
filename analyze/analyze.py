@@ -24,7 +24,6 @@ MODEL_DIR = '../models'
 TISSUE_MODEL = 'model-tissue'
 NODE_MODEL = 'model-node'
 OBEX_MODEL = 'model-obex'
-MIDLINE_MODEL = 'model-midline'
 TILE_SIZE = 300
 TILE_OVERLAP = 1.0 # Change this to be consistent with overlap used for model training
 
@@ -36,7 +35,6 @@ MINIMUM_AREA_DMN_REGION_KEY = 'minimum_area_dmn_region'
 MINIMUM_PERCENT_STAINED_PIXELS_NODE_KEY = 'minimum_percent_stained_pixels_node'
 MINIMUM_PERCENT_STAINED_PIXELS_OBEX_KEY = 'minimum_percent_stained_pixels_obex'
 MINIMUM_NUMBER_FOLLICLES_KEY = 'minimum_number_follicles'
-SHOW_DETAILS_FLAG_KEY = 'show_details_flag'
 
 # Subset of region detection methods that will be included in webpage (in the order given)
 # See detect-regions.py for possible values. Default method used for basic results output.
@@ -193,25 +191,6 @@ def classify_tiles_feature(image_file):
         model_file = os.path.join(MODEL_DIR, model_name)
         command += ['--model', model_file]
         subprocess.run(command)
-    return
-
-def classify_tiles_midline(image_file):
-    """For obex contours, classify each tile as being on the midline or not."""
-    image_file_path = os.path.dirname(image_file)
-    contour_file_names = filter_contour_files(image_file)
-    for contour_file_name in contour_file_names:
-        contour_file = os.path.join(image_file_path, contour_file_name)
-        tissue_type, _ = get_tissue_type(contour_file)
-        if tissue_type == 'obex':
-            contour_file_name_noext = os.path.splitext(contour_file_name)[0]
-            print(f'  Classifying midline tiles for contour {contour_file_name}')
-            command = ['python', 'classify-tiles.py']
-            tiles_dir = os.path.join(image_file_path, contour_file_name_noext + '-tiles')
-            command += ['--class', 'midline', '--tiles_dir', tiles_dir]
-            model_name = MIDLINE_MODEL
-            model_file = os.path.join(MODEL_DIR, model_name)
-            command += ['--model', model_file]
-            subprocess.run(command)
     return
 
 def get_region_info(contour_file, metadata={}):
@@ -401,8 +380,6 @@ def write_html_parameters(html_file, metadata):
         html_content += f"<li>Minimum Percent Stained Pixels Obex = {metadata[MINIMUM_PERCENT_STAINED_PIXELS_OBEX_KEY]}%</li>\n"
     if MINIMUM_NUMBER_FOLLICLES_KEY in metadata:
         html_content += f"<li>Minimum Number of Follicles = {metadata[MINIMUM_NUMBER_FOLLICLES_KEY]}</li>\n"
-    #if SHOW_DETAILS_FLAG_KEY in metadata:
-    #    html_content += f"<li>Show Details Flag = {metadata[SHOW_DETAILS_FLAG_KEY]}</li>\n"    
     html_content += "</ul>\n"
     html_file.write(html_content)
     return
@@ -480,12 +457,11 @@ def write_html_detailed_results(image_file, html_path, index_html_file, metadata
             write_html_section(index_html_file, f"Contour {contour_num}: {tissue_type} (certainty = {certainty:.6f})")
             write_html_image(index_html_file, contour_file_name_noext + '-distribution.png', 400, br=True)
             if tissue_type == 'obex':
-                for suffix in ['-midline-concavity', '-midline-tiles']:
+                for suffix in ['-midline-concavity']:
                     file = contour_file_noext + suffix + '.png'
                     shutil.copy(file, html_path)
-                write_html_section(index_html_file, "Midline Detection (concavity method, DL tile classification method)", level=3)
+                write_html_section(index_html_file, "Midline Detection (concavity method)", level=3)
                 write_html_image(index_html_file, contour_file_name_noext + '-midline-concavity.png', 400, br=False)
-                write_html_image(index_html_file, contour_file_name_noext + '-midline-tiles.png', 400, br=True)
             region_type, prob_threshold, area_threshold = get_region_info(contour_file, metadata)
             for detection_method in REGION_DETECTION_METHODS:
                 if ('diagonal' in detection_method) and ('_' in detection_method):
@@ -520,9 +496,6 @@ def write_html(image_file, metadata):
         show_details_flag = True
         if metadata:
             write_html_parameters(index_html_file, metadata)
-            if SHOW_DETAILS_FLAG_KEY in metadata:
-                show_details_flag = metadata[SHOW_DETAILS_FLAG_KEY]
-        #if show_details_flag:
         write_html_detailed_results(image_file, html_path, index_html_file, metadata)
         write_html_footer(index_html_file)
     return
@@ -551,7 +524,6 @@ def main():
     classify_tiles_tissue(image_file)
     classify_contours(image_file)
     classify_tiles_feature(image_file)
-    classify_tiles_midline(image_file)
     detect_midline(image_file, enhance)
     detect_regions(image_file, metadata)
     generate_contour_region_images(image_file, metadata, enhance)
