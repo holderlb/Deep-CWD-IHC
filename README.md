@@ -15,6 +15,8 @@ Step (2) uses a deep learning model that has been trained on a
 manually-prepared set of tissue types: lymph node and obex. Step (3) uses a deep learning model trained
 on slides that have been manually annotated with regions denoting positive and negative examples of dorsal
 motor nuclei (in obex tissue), and positive and negative examples of follicles (in lymph node tissue).
+Each model accepts a 300x300 pixel tile and outputs the classification of that tile. Each
+model has the same structure and is trained in the same way, but using different training tiles.
 
 The image slides are assumed to be in SVS format. The annotations are assumed to be added via QuPath,
 which are extracted in GeoJSON format.
@@ -40,28 +42,14 @@ A conda environment export is given in `environment.yml`. To setup a similar env
 
 `conda env create -f environment.yml`
 
-## Train models
+## Train tissue model (node vs. obex)
 
-The Deep-CWD-IHC framework relies on three deep neural network models: tissue model (node vs. obex),
-node model (follicle vs. non-follicle), and obex model (dorsal motor nucleus (DMV) vs. non-DMV).
-Each model accepts a 300x300 pixel tile and outputs the classification of that tile. Each
-model has the same structure and is trained in the same way, but using different training tiles.
-The following sections describe the processes for generating training tiles and training the models.
+Below are the steps for training the tissue model that classifies a tile as belonging to either
+node or obex tissue.
 
-### Exporting image annotations
+### Segment images (find tissue contours)
 
-The first step to train models is to identify regions of interest in the slide images. We assume
-the use of QuPath for manually annotating images in SVS format. Once the images are annotated, these
-annotations can be exported from QuPath using the `utils/export-annotations.sh` shell script. See
-details in the script's comments for proper setup. Executing the script will generate an
-`<image>.annotations.json` file for each image in the QuPath project. The file describes the
-locations of the annotations in GeoJSON format.
-
-`./export-annotations.sh`
-
-### Segmenting images
-
-Next, we need to extract the tissue contours from the images. The `common/segment.py` script is
+First, we need to extract the tissue contours from the images. The `common/segment.py` script is
 used for this purpose. The script identifies each tissue contour in the image and outputs a
 GeoJSON file describing the points outlining the contour. Each contour is numbered 1, 2, etc.
 
@@ -70,7 +58,7 @@ GeoJSON file describing the points outlining the contour. Each contour is number
 The `--enhance` argument can be used to increase the contrast of a low-contrast image. However,
 we generally found that this option is not needed.
 
-### Contour tissue labeling
+### Label tissue contours
 
 Each of the generated contours must be labeled as either `node` or `obex` for eventual training
 of the tissue model. The `train/add_classification.py` script is used for this purpose. For each
@@ -104,65 +92,115 @@ to accumulate the tile information into one tiles directory.
 
 The last step before training the model is to collect the training tiles into a single
 directory. The `train/collect-tiles.py` script takes the tiles directory, the destination
-training directory
+training directory, and the class names to collect (i.e., `node` and `obex`).
 
 ```collect-tiles.py --tiles_dir <tile_dir> --train_dir <train_dir>
-                    --class_names class_names --class_column <class_column>
+                    --class_names class_names [--class_column <class_column>]
                     [--sample_rate <N.N>]
 ```
 
------------------------------------
+The class column can be omitted assuming you are using the same column name `directory`
+that was used by `generate_tiles`. The default sampling rate is 1.0, but you can choose
+a smaller value to reduce the number of actual tiles used for training. The sampling
+rate is applied to each class independently.
 
-### Step 0: Scale slides (optional)
+### Train tissue model
 
-`scale-svs.py [--scale_factor 64] <slide.svs>`
+Finally, we are ready to train the tissue model using the `train/train-model.py` script.
+The simplest invocation is to provide the training directory from the previous step.
+The model will be trained using these tiles. The trained model is written in Keras
+format. See the comment at the top of the script for details on the other arguments.
 
-Scales SVS slide to a scaled down PNG image according to the optional scale factor (default = 64).
-This step is optional, but affords an easier way to view slides outside QuPath.
+```
+train-model.py --data_dir <data_dir> [--model_file <model_file>]
+              [--pretrained_model_file <pre_model_file>]
+              [--batch-size 32] [--epochs 300] [--unfreeze 20]
+```
 
-### Step 1: Segment tissue
+This model, which we refer to as `model-tissue.keras` will be used later to analyze
+new images.
 
-`segment.py <slide.svs>`
+## Train node and obex models (DMN vs. non-DMN, follicle vs. non-follicle)
 
-Segments the scaled image into tissue and non-tissue components. Identifies contours in the image
-that outline major tissue components. For each tissue component, generates an image with that
-component against a black background (used later for tissue type detection) and generates a
-GeoJSON file with the coordinates of the contour that can be loaded into QuPath using
-`load_contour.groovy`. Also generates a copy of the original image with all tissue contours
-highlighted in different colors.
+Below are the steps for training the two structure prediction models: the obex model that
+predicts if a tile overlaps a DMN or not, and the node model that predicts if a tile
+overlaps a follicle or not.
 
-Segmentation is based on the marching squares algorithm, which is implemented
-in the scikit-image find_contours method.
+### Exporting image annotations
 
-### Step 2: Detect tissue contour type
+The first step to train the models is to identify regions of interest in the slide images. We assume
+the use of QuPath for manually annotating images in SVS format. In our case, we used the annotations:
+`dorsal_motor_nucleus`, `not_dmn`, `follicle`, `non-follicular`.
 
-`detect-type.py --model_dir <model_dir> [--train <data_dir>] [--test <image_file>]`
+Once the images are annotated, these
+annotations can be exported from QuPath using the `utils/export-annotations.sh` shell script. See
+details in the script's comments for proper setup. Executing the script will generate an
+`<image>.annotations.json` file for each image in the QuPath project. The file describes the
+locations of the annotations in GeoJSON format.
 
-First, a DL model is trained to classify the different types of tissue
-(e.g., obex, node). After identifying example images of each tissue type,
-they are placed in directories like `examples/type1`, `examples/type2`, etc.
-Then, the `detect-type.py` script is run with `--train examples` to train
-a DL model to classify tissue types. The model information is written to
-the `model_dir` directory.
+`./export-annotations.sh`
 
-Then, the DL model can be used to classify new contour images by running
-the `detect-type.py` script using the `--test` option.
+### Generate node/obex training tiles
 
-### Step 3: Generate tissue feature tiles
+We generate training tiles for using the same
+`common/generate_tiles.py` script as used above, except we will use the GeoJSON annotations from
+the previous step. This script is designed to run repeatedly over the
+training images, appending tile images into a tiles directory and appending tile
+information to a single CSV file. Below is the command syntax. See the comment at the
+top of the script for details.
 
-`generate-tiles.py --image <svs_slide> --annotations <annotations> --tiles_dir <tiles_dir>`
+```
+generate-tiles.py --image <svs_slide_file> --annotations <annotations_file>
+                  --tiles_dir <tiles_dir> [--overlap <N.N>] [--tile_size <N>]
+                  [--tile_increment <N>] [--enhance]
+```
 
-Before running `generate-tiles.py` the QuPath annotations for each image need to
-be extracted using the `export-annotations.sh` script. See comments in this script
-and the accompanying `export-annotations.groovy` script for how to run the script.
+The simplest invocation of this script is to just provide the image, the annotations file
+(the GeoJSON file for one of the image's tissue contours), and the tiles directory
+where to store this information. Call this script repeatedly for each image
+to accumulate the tile information into one tiles directory.
 
-Once the annotations are extracted into GeoJSON files, the `generate-tiles.py` script
-can be run to generate image tiles that overlap the annotated features in the image.
-See the comment at the top of `generate-tiles.py` for more details.
+### Collect node/obex training tiles
 
-### Step 4: Detect tissue features
+The `train/collect-tiles.py` script is again used to collect tiles of each type
+into from the tiles directory to a destination training directory with sub-directories
+for each class name: `dorsal_motor_nucleus` and `not_dmn` for the obex model,
+`follicle` and `non-follicular` for the node model. So, `collect_tiles` will be
+called twice: once for collecting node model training tiles, and once for collecting
+obex model training tiles.
 
-`detect-features.py --model_dir <model_dir> [--train <tile_dir>] [--test <tile_file>]`
+```collect-tiles.py --tiles_dir <tile_dir> --train_dir <train_dir>
+                    --class_names class_names [--class_column <class_column>]
+                    [--sample_rate <N.N>]
+```
+
+The class column can be omitted assuming you are using the same column name `directory`
+that was used by `generate_tiles`. The default sampling rate is 1.0, but you can choose
+a smaller value to reduce the number of actual tiles used for training. The sampling
+rate is applied to each class independently.
+
+### Train node/obex models
+
+Finally, we are ready to train the node and obex models using the `train/train-model.py`
+script. The simplest invocation is to provide the training directory from the previous step.
+The model will be trained using these tiles. The trained model is written in Keras
+format. See the comment at the top of the script for details on the other arguments.
+
+```
+train-model.py --data_dir <data_dir> [--model_file <model_file>]
+              [--pretrained_model_file <pre_model_file>]
+              [--batch-size 32] [--epochs 300] [--unfreeze 20]
+```
+
+This script will be run twice: once to generate the node model, which we refer to as
+`model-node.keras`, and once to generate the obex model, which we refer to as
+`model-obex.keras`.
+
+## Analyze new image
+
+## Visualization tools
+
+
 
 ## Contributors
 
