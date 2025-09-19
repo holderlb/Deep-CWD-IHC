@@ -28,9 +28,8 @@ which are extracted in GeoJSON format.
 * `common/`: Scripts used by `analyze` and `train`.
 * `utils/`: Scripts use for extracting annotations and annotating images.
 
-The framework is designed as a set of scripts that are called from the command line or from
-the main scripts: `train/train.py` and `analyze/analyze.py`.
-Generally, the scripts have detailed comments at the top of the file describing their usage.
+The framework is designed as a set of scripts that are called from the command line.
+All scripts have detailed comments at the top of the file describing their usage.
 
 ## Setup
 
@@ -43,16 +42,76 @@ A conda environment export is given in `environment.yml`. To setup a similar env
 
 ## Train models
 
+The Deep-CWD-IHC framework relies on three deep neural network models: tissue model (node vs. obex),
+node model (follicle vs. non-follicle), and obex model (dorsal motor nucleus (DMV) vs. non-DMV).
+Each model accepts a 300x300 pixel tile and outputs the classification of that tile. Each
+model has the same structure and is trained in the same way, but using different training tiles.
+The following sections describe the processes for generating training tiles and training the models.
+
 ### Exporting image annotations
 
 The first step to train models is to identify regions of interest in the slide images. We assume
 the use of QuPath for manually annotating images in SVS format. Once the images are annotated, these
 annotations can be exported from QuPath using the `utils/export-annotations.sh` shell script. See
-details in the script's comments for proper setup. Executing the script will result in an
+details in the script's comments for proper setup. Executing the script will generate an
 `<image>.annotations.json` file for each image in the QuPath project. The file describes the
-annotation locations in GeoJSON format.
+locations of the annotations in GeoJSON format.
 
+`./export-annotations.sh`
 
+### Segmenting images
+
+Next, we need to extract the tissue contours from the images. The `common/segment.py` script is
+used for this purpose. The script identifies each tissue contour in the image and outputs a
+GeoJSON file describing the points outlining the contour. Each contour is numbered 1, 2, etc.
+
+`python segment.py --image <svs_image_file> --enhance`
+
+The `--enhance` argument can be used to increase the contrast of a low-contrast image. However,
+we generally found that this option is not needed.
+
+### Contour tissue labeling
+
+Each of the generated contours must be labeled as either `node` or `obex` for eventual training
+of the tissue model. The `train/add_classification.py` script is used for this purpose. For each
+contour file geenrated in the previous step, call `add_classification` with the GeoJSON contour
+file name and tissue class label for that contour `node` or `obex`. You can optionally provide
+a color name (e.g., red, green, blue) to help distinguish the classes when generating visuals
+(see description of `utils/annotate.py` later).
+
+`add-classification.py --contour <contour_file> --class <class> [--color <color>]`
+
+### Generate tissue training tiles
+
+Now we are ready to generate the tiles for training the tissue model using the
+`common/generate_tiles.py` script. This script is designed to run repeatedly over the
+image contours, appending tile images into a tiles directory and appending tile
+information to a single CSV file. Below is the command syntax. See the comment at the
+top of the script for details.
+
+```
+generate-tiles.py --image <svs_slide_file> --annotations <annotations_file>
+                  --tiles_dir <tiles_dir> [--overlap <N.N>] [--tile_size <N>]
+                  [--tile_increment <N>] [--enhance]
+```
+
+The simplest invocation of this script is to just provide the image, the annotations file
+(the GeoJSON file for one of the image's tissue contours), and the tiles directory
+where to store this information. Call this script repeatedly for each contour of each image
+to accumulate the tile information into one tiles directory.
+
+### Collect tissue training tiles
+
+The last step before training the model is to collect the training tiles into a single
+directory. The `train/collect-tiles.py` script takes the tiles directory, the destination
+training directory
+
+```collect-tiles.py --tiles_dir <tile_dir> --train_dir <train_dir>
+                    --class_names class_names --class_column <class_column>
+                    [--sample_rate <N.N>]
+```
+
+-----------------------------------
 
 ### Step 0: Scale slides (optional)
 
