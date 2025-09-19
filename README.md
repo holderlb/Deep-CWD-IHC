@@ -92,7 +92,8 @@ The last step before training the model is to collect the training tiles into a 
 directory. The `train/collect-tiles.py` script takes the tiles directory, the destination
 training directory, and the class names to collect (i.e., `node` and `obex`).
 
-```collect-tiles.py --tiles_dir <tile_dir> --train_dir <train_dir>
+```
+collect-tiles.py --tiles_dir <tile_dir> --train_dir <train_dir>
                     --class_names class_names [--class_column <class_column>]
                     [--sample_rate <N.N>]
 ```
