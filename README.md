@@ -158,6 +158,10 @@ The simplest invocation of this script is to just provide the image, the annotat
 where to store this information. Call this script repeatedly for each image
 to accumulate the tile information into one tiles directory.
 
+The `generate_tiles` script also analyzes tiles for the presence of staining. A `stained_pixels`
+column is added to the CSV file, whose value is the number of pixels in the 300x300 tile
+containing stain. This information is used later in the analysis phase.
+
 ### Collect node/obex training tiles
 
 The `train/collect-tiles.py` script is again used to collect tiles of each type
@@ -167,7 +171,8 @@ for each class name: `dorsal_motor_nucleus` and `not_dmn` for the obex model,
 called twice: once for collecting node model training tiles, and once for collecting
 obex model training tiles.
 
-```collect-tiles.py --tiles_dir <tile_dir> --train_dir <train_dir>
+```
+collect-tiles.py --tiles_dir <tile_dir> --train_dir <train_dir>
                     --class_names class_names [--class_column <class_column>]
                     [--sample_rate <N.N>]
 ```
