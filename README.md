@@ -2,24 +2,16 @@
 
 Deep learning framework for automated Chronic Wasting Disease (CWD) Immunohistochemistry (IHC).
 
-The overall goal of this framework is to identify slides with positive indications of CWD. However, the
-framework could also be used to look for similar properties/diseases in other image/tissue types. The
-process involves:
+The overall goal of this framework is to identify slides with positive indications of CWD. However, the framework could also be used to look for similar properties/diseases in other image/tissue types. The process involves:
 
 1. Isolating the tissue in the images
 2. Identifying the type of tissue (lymph node or obex)
 3. Finding structures within the tissue (dorsal motor nuclei and follicles)
 4. Detecting staining in the tissue structures
 
-Step (2) uses a deep learning model that has been trained on a
-manually-prepared set of tissue types: lymph node and obex. Step (3) uses a deep learning model trained
-on slides that have been manually annotated with regions denoting positive and negative examples of dorsal
-motor nuclei (in obex tissue), and positive and negative examples of follicles (in lymph node tissue).
-Each model accepts a 300x300 pixel tile and outputs the classification of that tile. Each
-model has the same structure and is trained in the same way, but using different training tiles.
+Step (2) uses a deep learning model that has been trained on a manually-prepared set of tissue types: lymph node and obex. Step (3) uses a deep learning model trained on slides that have been manually annotated with regions denoting positive and negative examples of dorsal motor nuclei (in obex tissue), and positive and negative examples of follicles (in lymph node tissue). Each model accepts a 300x300 pixel tile and outputs the classification of that tile. Each model has the same structure and is trained in the same way, but using different training tiles.
 
-The image slides are assumed to be in SVS format. The annotations are assumed to be added via QuPath,
-which are extracted in GeoJSON format.
+The image slides are assumed to be in SVS format. The annotations are assumed to be added via QuPath, which are extracted in GeoJSON format.
 
 ## Overview
 
@@ -33,6 +25,12 @@ which are extracted in GeoJSON format.
 
 The framework is designed as a set of scripts that are called from the command line.
 All scripts have detailed comments at the top of the file describing their usage.
+
+## Data and models
+
+The data used to train the models consists of 143 whole slide images, each with manual annotations added identifying regions as dorsal motor nucleus (DMN), non-DMN, follicle, and non-follicle. The data is available at <https://doi.org/10.5061/dryad.w6m905r2d>.
+
+The Deep-CWD-IHC framework supports the training and use of three models in Keras format: model-tissue.keras, model-node.keras, model-obex.keras. The tissue model is used to identify each tissue as node or obex. Once the tissue is identified, then the appropriate model (model-node or model-obex) is used to identify DMN regions for obex and follicle regions for nodes. The models are not tracked in the repository, but are attached to each release.
 
 ## Setup
 
